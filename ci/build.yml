@@ -1,0 +1,21 @@
+---
+
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+    tag: 1.23.6-bullseye
+
+inputs:
+  - name: dis-routing-api-poc
+
+outputs:
+  - name: build
+
+caches:
+  - path: go/
+
+run:
+  path: dis-routing-api-poc/ci/scripts/build.sh
