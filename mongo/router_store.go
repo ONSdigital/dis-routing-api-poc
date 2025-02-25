@@ -216,6 +216,36 @@ func (m *Mongo) UpdateRedirect(ctx context.Context, id string, update map[string
 	if err != nil {
 		return fmt.Errorf("invalid id format: %w", err)
 	}
+
+	// Retrieve the existing redirect
+	var currentRedirect models.Redirect
+	err = m.Connection.Collection(config.RedirectsCollection).FindOne(ctx, bson.M{"_id": objID}, &currentRedirect)
+	if err != nil {
+		return fmt.Errorf("redirect not found: %w", err)
+	}
+
+	// Check if "from" or "to" is being updated
+	newFrom, hasNewFrom := update["from"].(string)
+	newTo, hasNewTo := update["to"].(string)
+
+	// If "from" is changing, check for overlaps
+	if hasNewFrom && newFrom != currentRedirect.From {
+		var overlappingRedirect models.Redirect
+		err := m.Connection.Collection(config.RedirectsCollection).FindOne(ctx, bson.M{"from": newFrom}, &overlappingRedirect)
+		if err == nil && overlappingRedirect.ID != id {
+			return errors.New("overlapping redirect from the same path already exists")
+		}
+	}
+
+	// If "to" is changing, check for circular redirects
+	if hasNewTo && newTo != currentRedirect.To {
+		var circularRedirect models.Redirect
+		err := m.Connection.Collection(config.RedirectsCollection).FindOne(ctx, bson.M{"from": newTo, "to": newFrom}, &circularRedirect)
+		if err == nil {
+			return errors.New("circular redirect detected")
+		}
+	}
+
 	update["updated_at"] = time.Now()
 	_, err = m.Connection.Collection(config.RedirectsCollection).UpdateOne(ctx, bson.M{"_id": objID}, bson.M{"$set": update})
 	return err

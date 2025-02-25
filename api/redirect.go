@@ -19,6 +19,10 @@ func CreateRedirectHandler(store *store.DataStore) http.HandlerFunc {
 			http.Error(w, "Invalid request payload", http.StatusBadRequest)
 			return
 		}
+		if err := store.Backend.ValidateRedirect(context.Background(), &redirect); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		if err := store.Backend.CreateRedirect(context.Background(), &redirect); err != nil {
 			http.Error(w, "Failed to create redirect", http.StatusInternalServerError)
 			return
