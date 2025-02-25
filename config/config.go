@@ -3,8 +3,11 @@ package config
 import (
 	"time"
 
+	"github.com/ONSdigital/dp-mongodb/v3/mongodb"
 	"github.com/kelseyhightower/envconfig"
 )
+
+type MongoConfig = mongodb.MongoDriverConfig
 
 // Config represents service configuration for dis-routing-api-poc
 type Config struct {
@@ -12,13 +15,16 @@ type Config struct {
 	GracefulShutdownTimeout    time.Duration `envconfig:"GRACEFUL_SHUTDOWN_TIMEOUT"`
 	HealthCheckInterval        time.Duration `envconfig:"HEALTHCHECK_INTERVAL"`
 	HealthCheckCriticalTimeout time.Duration `envconfig:"HEALTHCHECK_CRITICAL_TIMEOUT"`
-	OTBatchTimeout             time.Duration `encconfig:"OTEL_BATCH_TIMEOUT"`
-	OTExporterOTLPEndpoint     string        `envconfig:"OTEL_EXPORTER_OTLP_ENDPOINT"`
-	OTServiceName              string        `envconfig:"OTEL_SERVICE_NAME"`
-	OtelEnabled                bool          `envconfig:"OTEL_ENABLED"`
+	MongoConfig
+	RouterAPIURL string `envconfig:""`
 }
 
 var cfg *Config
+
+const (
+	RoutesCollection    = "RoutesCollection"
+	RedirectsCollection = "RedirectsCollection"
+)
 
 // Get returns the default config with any modifications through environment
 // variables
@@ -32,10 +38,21 @@ func Get() (*Config, error) {
 		GracefulShutdownTimeout:    5 * time.Second,
 		HealthCheckInterval:        30 * time.Second,
 		HealthCheckCriticalTimeout: 90 * time.Second,
-		OTBatchTimeout:             5 * time.Second,
-		OTExporterOTLPEndpoint:     "localhost:4317",
-		OTServiceName:              "dis-routing-api-poc",
-		OtelEnabled:                false,
+		MongoConfig: MongoConfig{
+			ClusterEndpoint:               "localhost:27017",
+			Username:                      "",
+			Password:                      "",
+			Database:                      "router",
+			Collections:                   map[string]string{RoutesCollection: "routes", RedirectsCollection: "redirects"},
+			ReplicaSet:                    "",
+			IsStrongReadConcernEnabled:    false,
+			IsWriteConcernMajorityEnabled: true,
+			ConnectTimeout:                5 * time.Second,
+			QueryTimeout:                  15 * time.Second,
+			TLSConnectionConfig: mongodb.TLSConnectionConfig{
+				IsSSL: false,
+			},
+		},
 	}
 
 	return cfg, envconfig.Process("", cfg)
