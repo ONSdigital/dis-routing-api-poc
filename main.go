@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	goerrors "errors"
 	"os"
 	"os/signal"
 	"syscall"
@@ -11,8 +10,6 @@ import (
 	"github.com/ONSdigital/dis-routing-api-poc/service"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/pkg/errors"
-
-	dpotelgo "github.com/ONSdigital/dp-otel-go"
 )
 
 const serviceName = "dis-routing-api-poc"
@@ -25,12 +22,12 @@ var (
 	// Version represents the version of the service that is running
 	Version string
 
-// TODO: remove below explainer before commiting
-/* NOTE: replace the above with the below to run code with for example vscode debugger.
-BuildTime string = "1601119818"
-GitCommit string = "6584b786caac36b6214ffe04bf62f058d4021538"
-Version   string = "v0.1.0"
-*/
+	// TODO: remove below explainer before commiting
+	/* NOTE: replace the above with the below to run code with for example vscode debugger.
+	   BuildTime string = "1601119818"
+	   GitCommit string = "6584b786caac36b6214ffe04bf62f058d4021538"
+	   Version   string = "v0.1.0"
+	*/
 )
 
 func main() {
@@ -59,27 +56,9 @@ func run(ctx context.Context) error {
 		return errors.Wrap(err, "error getting configuration")
 	}
 
-	if cfg.OtelEnabled {
-		// Set up OpenTelemetry
-		otelConfig := dpotelgo.Config{
-			OtelServiceName:          cfg.OTServiceName,
-			OtelExporterOtlpEndpoint: cfg.OTExporterOTLPEndpoint,
-			OtelBatchTimeout:         cfg.OTBatchTimeout,
-		}
-
-		otelShutdown, oErr := dpotelgo.SetupOTelSDK(ctx, otelConfig)
-		if oErr != nil {
-			log.Fatal(ctx, "error setting up OpenTelemetry - hint: ensure OTEL_EXPORTER_OTLP_ENDPOINT is set", oErr)
-		}
-		// Handle shutdown properly so nothing leaks.
-		defer func() {
-			err = goerrors.Join(err, otelShutdown(context.Background()))
-		}()
-	}
-
 	// Start service
-	svc, err := service.Run(ctx, cfg, svcList, BuildTime, GitCommit, Version, svcErrors)
-	if err != nil {
+	svc := service.New(cfg, svcList)
+	if err := svc.Run(ctx, BuildTime, GitCommit, Version, svcErrors); err != nil {
 		return errors.Wrap(err, "running service failed")
 	}
 

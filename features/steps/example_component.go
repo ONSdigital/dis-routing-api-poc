@@ -65,7 +65,8 @@ func (c *Component) Close() error {
 
 func (c *Component) InitialiseService() (http.Handler, error) {
 	var err error
-	c.svc, err = service.Run(context.Background(), c.Config, c.svcList, "1", "", "", c.errorChan)
+	svc := service.New(c.Config, c.svcList)
+	err = svc.Run(context.Background(), "1", "", "", c.errorChan)
 	if err != nil {
 		return nil, err
 	}

@@ -1,10 +1,13 @@
 package service
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/ONSdigital/dis-routing-api-poc/config"
-
+	"github.com/ONSdigital/dis-routing-api-poc/mongo"
+	"github.com/ONSdigital/dis-routing-api-poc/store"
+	"github.com/ONSdigital/dp-api-clients-go/v2/health"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
 )
@@ -13,6 +16,7 @@ import (
 type ExternalServiceList struct {
 	HealthCheck bool
 	Init        Initialiser
+	MongoDB     bool
 }
 
 // NewServiceList creates a new service list with the provided initialiser
@@ -32,6 +36,16 @@ func (e *ExternalServiceList) GetHTTPServer(bindAddr string, router http.Handler
 	return s
 }
 
+// GetMongoDB creates a mongoDB client and sets the Mongo flag to true
+func (e *ExternalServiceList) GetMongoDB(ctx context.Context, cfg config.MongoConfig) (store.MongoDB, error) {
+	mongoDB, err := e.Init.DoGetMongoDB(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	e.MongoDB = true
+	return mongoDB, nil
+}
+
 // GetHealthCheck creates a healthcheck with versionInfo and sets teh HealthCheck flag to true
 func (e *ExternalServiceList) GetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error) {
 	hc, err := e.Init.DoGetHealthCheck(cfg, buildTime, gitCommit, version)
@@ -47,6 +61,20 @@ func (e *Init) DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer 
 	s := dphttp.NewServer(bindAddr, router)
 	s.HandleOSSignals = false
 	return s
+}
+
+// DoGetMongoDB returns a MongoDB
+func (e *Init) DoGetMongoDB(ctx context.Context, cfg config.MongoConfig) (store.MongoDB, error) {
+	mongodb, err := mongo.NewDBConnection(ctx, cfg)
+	if err != nil {
+		return nil, err
+	}
+	return mongodb, nil
+}
+
+// DoGetHealthClient creates a new Health Client for the provided name and url
+func (e *Init) DoGetHealthClient(name, url string) *health.Client {
+	return health.NewClient(name, url)
 }
 
 // DoGetHealthCheck creates a healthcheck with versionInfo

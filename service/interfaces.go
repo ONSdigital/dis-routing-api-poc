@@ -5,6 +5,8 @@ import (
 	"net/http"
 
 	"github.com/ONSdigital/dis-routing-api-poc/config"
+	"github.com/ONSdigital/dis-routing-api-poc/store"
+	"github.com/ONSdigital/dp-api-clients-go/v2/health"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 )
 
@@ -15,6 +17,8 @@ import (
 // Initialiser defines the methods to initialise external services
 type Initialiser interface {
 	DoGetHTTPServer(bindAddr string, router http.Handler) HTTPServer
+	DoGetMongoDB(ctx context.Context, cfg config.MongoConfig) (store.MongoDB, error)
+	DoGetHealthClient(name, url string) *health.Client
 	DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, version string) (HealthChecker, error)
 }
 
