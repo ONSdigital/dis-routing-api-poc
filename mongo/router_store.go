@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ONSdigital/dis-routing-api-poc/config"
+	"github.com/ONSdigital/dis-routing-api-poc/kafka"
 	"github.com/ONSdigital/dis-routing-api-poc/models"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
 	mongohealth "github.com/ONSdigital/dp-mongodb/v3/health"
@@ -18,9 +19,10 @@ import (
 
 type Mongo struct {
 	mongodriver.MongoDriverConfig
-
-	Connection   *mongodriver.MongoConnection
-	healthClient *mongohealth.CheckMongoClient
+	RoutingUpdateHandler *kafka.RoutingUpdateHandler
+	Database             string
+	Connection           *mongodriver.MongoConnection
+	healthClient         *mongohealth.CheckMongoClient
 }
 
 // NewDBConnection creates a new Mongo object encapsulating a connection to the mongo server/cluster with the given configuration,
@@ -138,6 +140,19 @@ func (m *Mongo) CreateRoute(ctx context.Context, route *models.Route) error {
 	route.CreatedAt = time.Now()
 	route.UpdatedAt = time.Now()
 	_, err := m.Connection.Collection(config.RoutesCollection).InsertOne(ctx, route)
+
+	// Prepare event data
+	event := map[string]interface{}{
+		"action":    "create",
+		"entity":    "route",
+		"id":        route.ID,
+		"payload":   route,
+		"timestamp": time.Now(),
+	}
+
+	// Queue event for Kafka batching
+	m.RoutingUpdateHandler.HandleEvent(ctx, event)
+
 	return err
 }
 

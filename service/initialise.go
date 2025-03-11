@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/ONSdigital/dis-routing-api-poc/config"
@@ -9,6 +10,7 @@ import (
 	"github.com/ONSdigital/dis-routing-api-poc/store"
 	"github.com/ONSdigital/dp-api-clients-go/v2/health"
 	"github.com/ONSdigital/dp-healthcheck/healthcheck"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	dphttp "github.com/ONSdigital/dp-net/v2/http"
 )
 
@@ -85,4 +87,27 @@ func (e *Init) DoGetHealthCheck(cfg *config.Config, buildTime, gitCommit, versio
 	}
 	hc := healthcheck.New(versionInfo, cfg.HealthCheckCriticalTimeout, cfg.HealthCheckInterval)
 	return &hc, nil
+}
+
+// GetKafkaProducer creates a Kafka producer and sets the producder flag to true
+var GetKafkaProducer = func(ctx context.Context, cfg *config.Kafka) (kafka.IProducer, error) {
+	if cfg == nil {
+		return nil, errors.New("cannot create a kafka producer without kafka config")
+	}
+	pConfig := &kafka.ProducerConfig{
+		BrokerAddrs:       cfg.Addr,
+		Topic:             cfg.ProducerTopic,
+		MinBrokersHealthy: &cfg.ProducerMinBrokersHealthy,
+		KafkaVersion:      &cfg.Version,
+		MaxMessageBytes:   &cfg.MaxBytes,
+	}
+	if cfg.SecProtocol == config.KafkaTLSProtocol {
+		pConfig.SecurityConfig = kafka.GetSecurityConfig(
+			cfg.SecCACerts,
+			cfg.SecClientCert,
+			cfg.SecClientKey,
+			cfg.SecSkipVerify,
+		)
+	}
+	return kafka.NewProducer(ctx, pConfig)
 }

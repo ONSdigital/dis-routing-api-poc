@@ -2,11 +2,13 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/ONSdigital/dis-routing-api-poc/api"
 	"github.com/ONSdigital/dis-routing-api-poc/config"
 	"github.com/ONSdigital/dis-routing-api-poc/store"
+	kafka "github.com/ONSdigital/dp-kafka/v3"
 	"github.com/ONSdigital/log.go/v2/log"
 	"github.com/gorilla/mux"
 	"github.com/justinas/alice"
@@ -26,6 +28,7 @@ type Service struct {
 	ServiceList *ExternalServiceList
 	HealthCheck HealthChecker
 	mongoDB     store.MongoDB
+	Producer    kafka.IProducer
 }
 
 // New creates a new service
@@ -42,6 +45,10 @@ func (svc *Service) Run(ctx context.Context, buildTime, gitCommit, version strin
 	log.Info(ctx, "running service")
 	cfg := svc.Config
 	log.Info(ctx, "using service configuration", log.Data{"config": cfg})
+
+	if svc.Producer, err = GetKafkaProducer(ctx, cfg.Kafka); err != nil {
+		return fmt.Errorf("failed to create kafka producer: %w", err)
+	}
 
 	// Get MongoDB client
 	svc.mongoDB, err = svc.ServiceList.GetMongoDB(ctx, cfg.MongoConfig)
@@ -99,6 +106,11 @@ func (svc *Service) Close(ctx context.Context) error {
 			svc.HealthCheck.Stop()
 		}
 
+		if err := svc.closeProducer(ctx); err != nil {
+			log.Error(ctx, "producer shutdown error", err)
+			hasShutdownError = true
+		}
+
 		// stop any incoming requests before closing any outbound connections
 		if err := svc.Server.Shutdown(ctx); err != nil {
 			log.Error(ctx, "failed to shutdown http server", err)
@@ -125,6 +137,20 @@ func (svc *Service) Close(ctx context.Context) error {
 	}
 
 	log.Info(ctx, "graceful shutdown was successful")
+	return nil
+}
+
+// closeProducer closes the Kafka producer
+func (svc *Service) closeProducer(ctx context.Context) error {
+	if svc.Producer == nil {
+		return nil
+	}
+
+	log.Info(ctx, "closing kafka producer...")
+	if err := svc.Producer.Close(ctx); err != nil {
+		return fmt.Errorf("failed to close kafka producer: %w", err)
+	}
+	log.Info(ctx, "closed kafka producer")
 	return nil
 }
 

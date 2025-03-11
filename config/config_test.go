@@ -38,6 +38,21 @@ func TestConfig(t *testing.T) {
 				So(config.MongoConfig.ConnectTimeout, ShouldEqual, 5*time.Second)
 				So(config.MongoConfig.IsStrongReadConcernEnabled, ShouldEqual, false)
 				So(config.MongoConfig.IsWriteConcernMajorityEnabled, ShouldEqual, true)
+
+				So(cfg.Kafka.ContentUpdatedGroup, ShouldEqual, "dis-routing-api-poc")
+				So(cfg.Kafka.ProducerTopic, ShouldEqual, "routing-updated")
+				So(cfg.Kafka.Addr, ShouldResemble, []string{"localhost:9092", "localhost:9093", "localhost:9094"})
+				So(cfg.Kafka.Version, ShouldEqual, "1.0.2")
+				So(cfg.Kafka.OffsetOldest, ShouldBeTrue)
+				So(cfg.Kafka.NumWorkers, ShouldEqual, 1)
+				So(cfg.Kafka.SecProtocol, ShouldEqual, "")
+				So(cfg.Kafka.SecCACerts, ShouldEqual, "")
+				So(cfg.Kafka.SecClientCert, ShouldEqual, "")
+				So(cfg.Kafka.SecClientKey, ShouldEqual, "")
+				So(cfg.Kafka.SecSkipVerify, ShouldBeFalse)
+				So(cfg.Kafka.MaxBytes, ShouldEqual, 2000000)
+				So(cfg.Kafka.ConsumerMinBrokersHealthy, ShouldEqual, 1)
+				So(cfg.Kafka.ProducerMinBrokersHealthy, ShouldEqual, 1)
 			})
 
 			Convey("Then a second call to config should return the same config", func() {
