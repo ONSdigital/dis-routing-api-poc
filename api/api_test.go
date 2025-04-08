@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/ONSdigital/dis-routing-api-poc/store"
 	"github.com/gorilla/mux"
 	. "github.com/smartystreets/goconvey/convey"
 )
@@ -14,12 +15,12 @@ func TestSetup(t *testing.T) {
 	Convey("Given an API instance", t, func() {
 		r := mux.NewRouter()
 		ctx := context.Background()
-		api := Setup(ctx, r)
+		store := &store.DataStore{}
+		api := Setup(ctx, r, store)
 
-		// TODO: remove hello world example handler route test case
 		Convey("When created the following routes should have been added", func() {
-			// Replace the check below with any newly added api endpoints
-			So(hasRoute(api.Router, "/hello", "GET"), ShouldBeTrue)
+			So(hasRoute(api.Router, "/api/v1/routes", "GET"), ShouldBeTrue)
+			So(hasRoute(api.Router, "/api/v1/redirects", "GET"), ShouldBeTrue)
 		})
 	})
 }

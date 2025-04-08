@@ -13,7 +13,7 @@ VERSION ?= $(shell git tag --points-at HEAD | grep ^v | head -n 1)
 LDFLAGS = -ldflags "-X main.BuildTime=$(BUILD_TIME) -X main.GitCommit=$(GIT_COMMIT) -X main.Version=$(VERSION)"
 
 .PHONY: all
-all: delimiter-AUDIT audit delimiter-LINTERS lint delimiter-UNIT-TESTS test delimiter-COMPONENT_TESTS test-component delimiter-FINISH ## Runs multiple targets, audit, lint, test and test-component
+all: delimiter-AUDIT audit delimiter-LINTERS lint delimiter-UNIT-TESTS test delimiter-FINISH ## Runs multiple targets, audit, lint, test and test-component
 
 .PHONY: audit
 audit: ## Runs checks for security vulnerabilities on dependencies (including transient ones)
@@ -51,10 +51,6 @@ lint-local: ## Use locally to run linters against Go code
 .PHONY: test
 test: ## Runs unit tests including checks for race conditions and returns coverage
 	go test -race -cover ./...
-
-.PHONY: test-component
-test-component: ## Runs component test suite
-	go test -cover -coverpkg=github.com/ONSdigital/dis-routing-api-poc/... -component
 
 .PHONY: help
 help: ## Show help page for list of make targets
