@@ -1,5 +1,11 @@
 # dis-routing-api-poc
 
+---
+
+:warning: This repository was archived in May 2025 and is no longer in development. :warning:
+
+---
+
 Proof of concept for a Router API that would be the database interface to CRUD path based routes and redirects.
 
 Please refer the to documentation here - https://confluence.ons.gov.uk/display/DIS/Routing+APIs for Objectives and
